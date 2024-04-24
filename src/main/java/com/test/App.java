@@ -1,6 +1,5 @@
 package com.test;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -8,24 +7,28 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneLayout;
+import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 /**
  * Hello world!
  *
@@ -42,15 +45,46 @@ public class App extends JFrame
     private GridBagConstraints GameUIGBC;
     private boolean isInitialized = false;
     private HashMap<String, JPanel> GamePages = new HashMap<String,JPanel>();
-    static class GameTopics {
-        private static HashMap<String, String[]> gameTopics = new HashMap<String, String[]>();
-
-        {
+    
+    private String difficulty;
+    private String topic;
+    private static class GameInfo {
+        public static HashMap<String, HashMap<String, HashMap<String, Object>>> GameStat = new HashMap<String, HashMap<String, HashMap<String,Object>>>();
+        public static HashMap<String, String[]> gameTopics = new HashMap<String, String[]>();
+        public static HashMap<String, int[]> gameDifficulty =new HashMap<String, int[]>();
+        public static String[] gameDifficulties = {"Easy", "Medium", "Hard"};
+        public static HashMap<String, int[]> gameSizes = new HashMap<String, int[]>();
+        static {
             gameTopics.put("Programming", new String[]{
-
+                "C", "Clang.png",
+                "C#", "Csharp.png",
+                "HTML", "html.png",
+                "Java", "Java.png",
+                "Javascript", "javascript.png",
+                "PHP", "php.png",
+                "Python", "python.jpg"
             });
+            gameDifficulty.put("Easy", new int[]{4,3});
+            gameDifficulty.put("Medium", new int[]{4,4});
+            gameDifficulty.put("Hard", new int[]{5,4});
+            gameSizes.put("Easy", new int[]{180, 200});
+            gameSizes.put("Medium", new int[]{150, 150});
+            gameSizes.put("Hard", new int[]{140, 155});
+            
+            for(String difficultyName : gameDifficulties){
+                GameStat.put(difficultyName, new HashMap<String, HashMap<String,Object>>());
+                for(String key : gameTopics.keySet()){
+                    final HashMap<String, HashMap<String,Object>> topicInfo = GameStat.get(difficultyName);
+                    final HashMap<String,Object> topicProps = new HashMap<String, Object>();
+                    topicProps.put("accuracy", 0.0f);
+                    topicProps.put("time", 0);
+                    topicInfo.put(key, topicProps);
+                }
+            }
+            
         }
     }
+    
     public App init(){
         if(isInitialized) return this;
         
@@ -86,7 +120,6 @@ public class App extends JFrame
         final JPanel GameDifficulty = new JPanel();
         final JPanel GameMode = new JPanel();
         final JPanel GameTopics = new JPanel();
-        final JScrollPane GameTopics2 = new JScrollPane(GameTopics);
         final JPanel MainGame = new JPanel();
         
         final JButton playBtn = new JButton("Play");
@@ -220,6 +253,7 @@ public class App extends JFrame
             new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e){
+                    difficulty = "Easy";
                     self.GameUI.remove(GameDifficulty);
                     self.GameUI.add(self.GamePages.get("GameMode"), GameUIGBC);
                     self.revalidate();
@@ -231,6 +265,7 @@ public class App extends JFrame
             new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e){
+                    difficulty = "Medium";
                     self.GameUI.remove(GameDifficulty);
                     self.GameUI.add(self.GamePages.get("GameMode"), GameUIGBC);
                     self.revalidate();
@@ -242,6 +277,7 @@ public class App extends JFrame
             new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e){
+                    difficulty = "Hard";
                     self.GameUI.remove(GameDifficulty);
                     self.GameUI.add(self.GamePages.get("GameMode"), GameUIGBC);
                     self.revalidate();
@@ -285,7 +321,7 @@ public class App extends JFrame
                 RootGBC.anchor = GridBagConstraints.NORTH;
                 RootGBC.weighty = 1;
                 self.GameUI.remove(GameMode);
-                self.GameUI.add(GameTopics2);
+                self.GameUI.add(GameTopics);
                 GameUILayout.setConstraints(GameUI, RootGBC);
                 self.GameUI.revalidate();
                 self.GameUI.repaint();
@@ -296,6 +332,14 @@ public class App extends JFrame
         randomBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e){
+                RootGBC.anchor = GridBagConstraints.NORTH;
+                RootGBC.weighty = 0;
+                self.GameUI.add(GameTopics);
+                GameUILayout.setConstraints(GameUI, RootGBC);
+                self.GameUI.revalidate();
+                self.GameUI.repaint();
+                self.revalidate();
+                self.repaint();
                 self.GameUI.remove(GameMode);
                 self.GameUI.add(self.GamePages.get("MainGame"), GameUIGBC);
                 self.revalidate();
@@ -316,33 +360,176 @@ public class App extends JFrame
 
         GridBagLayout GameTopicsLayout = new GridBagLayout();
         GridBagConstraints GameTopicsGBC = new GridBagConstraints();
-        ScrollPaneLayout GameTopics2Layout = new ScrollPaneLayout();
 
         final JPanel topicsTitlePanel = new JPanel();
-        final BorderLayout topicsTitlePanelLayout = new BorderLayout();
-        final JLabel topicsTitle = new JLabel("Choose Topic");
-        
+        final GridBagLayout topicsTitlePanelLayout = new GridBagLayout();
+        final GridBagConstraints topicsTitlePanelGBC = new GridBagConstraints();
+        final GridBagLayout topicsBodyLayout = new GridBagLayout();
+        final GridBagConstraints topicsBodyGBC = new GridBagConstraints();
+        final JPanel topicsBodyPanel = new JPanel();
+        final JLabel topicsTitle = new JLabel("PairUP");
+        ArrayList<JPanel> topics = new ArrayList<JPanel>();
+
+
         topicsTitlePanel.setLayout(topicsTitlePanelLayout);
         topicsTitlePanel.setOpaque(false);
-        topicsTitlePanel.add(topicsTitle, BorderLayout.CENTER);
-        topicsTitle.setFont(new Font("Arial", Font.PLAIN, 24));
-
+        topicsTitlePanel.add(topicsTitle, topicsTitlePanelGBC);
+        topicsTitle.setFont(new Font("Arial", Font.PLAIN, 44));
+        topicsBodyPanel.setLayout(topicsBodyLayout);
+        topicsBodyPanel.setOpaque(false);
 
         GameTopics.setLayout(GameTopicsLayout);
         GameTopics.setOpaque(false);
-        GameTopics2.setLayout(GameTopics2Layout);
-        GameTopics2.setOpaque(false);
-        
         
 
         GameTopicsGBC.anchor = GridBagConstraints.PAGE_START;
         GameTopicsGBC.fill = GridBagConstraints.BOTH;
         GameTopicsGBC.gridwidth = GridBagConstraints.REMAINDER;
-
+        GameTopicsGBC.insets = new Insets(24, 0, 36, 0);
+        
 
         GameTopics.add(topicsTitlePanel, GameTopicsGBC);
+        GameTopicsGBC.insets = new Insets(0,0,0,0);
+
+        topicsBodyGBC.insets = new Insets(7,10,7,10);
+        final Set gameTopics = GameInfo.gameTopics.keySet();
+        System.out.println(gameTopics.size());
+        int i = 0;
+        for(Object key : gameTopics){
+            if(((i+1) % 4) == 0)
+                topicsBodyGBC.gridwidth = GridBagConstraints.REMAINDER;
+            else
+                topicsBodyGBC.gridwidth = 1;
+            final int j = i;
+            final JPanel sampleTopic = new JPanel();
+            final int
+                scWidth = screenSize.width,
+                scHeight = screenSize.height;
+            sampleTopic.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    // TODO Auto-generated method stub
+                    super.mouseClicked(e);
+                    self.GameUI.remove(GameTopics);
+
+                    
+                    // RootGBC.weighty = 0;
+                    RootGBC.anchor = GridBagConstraints.CENTER;
+                    
+
+                    
+                    int[] gridSize = GameInfo.gameDifficulty.get(difficulty);
+                    GridBagLayout newLayout = new GridBagLayout();
+                    GridBagConstraints gbc = new GridBagConstraints();
+                    final JPanel game = new JPanel();
+                    gbc.anchor = GridBagConstraints.CENTER;
+                    gbc.fill = GridBagConstraints.NONE;
+                    game.setOpaque(false);
+                    game.setLayout(newLayout);
+                    final JPanel titlePanel = new JPanel();
+                    titlePanel.add(new JLabel("test"));
+                    gbc.gridwidth = GridBagConstraints.REMAINDER;
+                    gbc.insets = new Insets(5, 5, 5, 5);
+                    gbc.weighty = 1;
+                    MainGame.add(titlePanel,gbc);
+                    MainGame.setPreferredSize(new Dimension(800, 700));
+                    final int[] cardSize = GameInfo.gameSizes.get(difficulty);
+                    for(int i = 0, max = gridSize[0] * gridSize[1]; i< max;i++){
+                        if((i+1) % gridSize[0] == 0)
+                            gbc.gridwidth = GridBagConstraints.REMAINDER;
+                        else
+                            gbc.gridwidth = 1;
+                        final JButton gameCard = new JButton("btn");
+                        // gameCard.setPreferredSize(new Dimension(190, 280));
+                        gameCard.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
+                        game.add(gameCard, gbc);
+                    }
+                    
+                    MainGame.add(game);
+                    self.GameUI.add(MainGame, GameUIGBC);
+                    self.GameUILayout.setConstraints(GameUI, RootGBC);
+                    self.revalidate();
+                    self.repaint();
+                }
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    // TODO Auto-generated method stub
+                    super.mouseEntered(e);
+                    sampleTopic.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                }
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    // TODO Auto-generated method stub
+                    super.mouseExited(e);
+                    sampleTopic.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+                }
+            });
+            sampleTopic.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            sampleTopic.setPreferredSize(new Dimension(230, 290));
+            sampleTopic.setLayout(new BorderLayout(2,0));
+            final JPanel cardTitlePanel = new JPanel();
+            final GridBagLayout cardTitleLayout = new GridBagLayout();
+            final GridBagConstraints cardTitleGBC = new GridBagConstraints();
+            
+            
+            cardTitlePanel.setLayout(cardTitleLayout);
+
+            cardTitleGBC.anchor = GridBagConstraints.WEST;
+            cardTitleGBC.fill = GridBagConstraints.NONE;
+            cardTitleGBC.ipady = 12;
+            
+            final String cardTitle = (String) key;
+            final JLabel cardTitleLabel = new JLabel(cardTitle);
+            cardTitleLabel.setFont(new Font("Arial", Font.PLAIN, 20));
+            cardTitlePanel.add(cardTitleLabel, cardTitleGBC);
+            sampleTopic.add(cardTitlePanel, BorderLayout.NORTH);
+            sampleTopic.add(new JLabel(bg), BorderLayout.CENTER);
+            final JPanel cardInfo = new JPanel();
+            final GridBagLayout cardInfoLayout = new GridBagLayout();
+            final GridBagConstraints cardInfoConstraints = new GridBagConstraints();
+            cardInfoConstraints.fill = GridBagConstraints.HORIZONTAL;
+            cardInfoConstraints.anchor = GridBagConstraints.CENTER;
+            cardInfoConstraints.ipady = 2;
+            cardInfoConstraints.ipadx = 12;
+            cardInfo.setLayout(cardInfoLayout);
+            final Font infoFont = new Font("Arial", Font.PLAIN, 16);
+            final JLabel accuracyJLabel = new JLabel("0% Accuracy");
+            accuracyJLabel.setFont(infoFont);
+            cardInfo.setPreferredSize(new Dimension(230, 36));
+            cardInfo.add(accuracyJLabel, cardInfoConstraints);
+            cardInfoConstraints.gridwidth = GridBagConstraints.REMAINDER;
+            cardInfoConstraints.ipady = 3;
+            cardInfoConstraints.ipadx = 6;
+            final JLabel timeJLabel = new JLabel("Best Time 0m0s");
+            timeJLabel.setFont(infoFont);
+            cardInfo.add(timeJLabel, cardInfoConstraints);
+            cardInfoConstraints.gridwidth = 1;
+            
+            sampleTopic.add(cardInfo, BorderLayout.SOUTH);
+            
+            topicsBodyPanel.add(sampleTopic, topicsBodyGBC);
+            topics.add(sampleTopic);
+            i++;
+            System.out.println(i);
+        }
+        GameTopicsGBC.fill = GridBagConstraints.BOTH;
+        GameTopicsGBC.gridwidth = GridBagConstraints.RELATIVE;
         
+        final JScrollPane topicsBodyScrollPane = new JScrollPane(topicsBodyPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        final JViewport topicsBodyVP = topicsBodyScrollPane.getViewport();
+        topicsBodyPanel.setOpaque(false);
+        topicsBodyScrollPane.setOpaque(false);
+        topicsBodyVP.setOpaque(false);
+        topicsBodyScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        
+
+        topicsBodyScrollPane.setPreferredSize(new Dimension((int)(0.75f * screenSize.width), (int)(0.7f * screenSize.height)));
+        GameTopicsGBC.ipady = 20;
+        GameTopics.add(topicsBodyScrollPane, GameTopicsGBC);
         GamePages.put("GameTopics", GameTopics);
+
+        MainGame.setOpaque(false);
+
         GamePages.put("MainGame", MainGame);
         
 
