@@ -1,5 +1,6 @@
 package com.test;
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -9,6 +10,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -26,8 +28,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 /**
  * Hello world!
@@ -48,27 +53,52 @@ public class App extends JFrame
     
     private String difficulty;
     private String topic;
+    private JButton lastPicked;
+    private Timer countdownTimer;
+    private Timer startTimer;
+    private long gameTime;
+    private int gameAccuracy;
+    private int gameCountdown = 5;
+    
+
     private static class GameInfo {
         public static HashMap<String, HashMap<String, HashMap<String, Object>>> GameStat = new HashMap<String, HashMap<String, HashMap<String,Object>>>();
         public static HashMap<String, String[]> gameTopics = new HashMap<String, String[]>();
         public static HashMap<String, int[]> gameDifficulty =new HashMap<String, int[]>();
         public static String[] gameDifficulties = {"Easy", "Medium", "Hard"};
         public static HashMap<String, int[]> gameSizes = new HashMap<String, int[]>();
+
         static {
-            gameTopics.put("Programming", new String[]{
+            gameTopics.put("Programming Languages", new String[]{
                 "C", "Clang.png",
                 "C#", "Csharp.png",
                 "HTML", "html.png",
                 "Java", "Java.png",
                 "Javascript", "javascript.png",
                 "PHP", "php.png",
-                "Python", "python.jpg"
+                "Python", "python.jpg",
+                "Ruby", "ruby.png",
+                "C++", "C++.png",
+                "Kotlin", "kotlin.jpg",
+                "Typescript", "typescript.png"
+            });
+            gameTopics.put("Country Flags", new String[]{
+                "Monaco", "monaco.jpg",
+                "Italy", "italy.jpg",
+                "Japan", "japan.jpg",
+                "Mexico", "mexico.jpg",
+                "Thailand", "thailand.jpg",
+                "Canada", "canada.jpg",
+                "India", "india.jpg",
+                "Philippines", "philippines.jpg",
+                "Vietnam", "vietnam.jpg",
+                "Cambodia", "cambodia.jpg"
             });
             gameDifficulty.put("Easy", new int[]{4,3});
             gameDifficulty.put("Medium", new int[]{4,4});
             gameDifficulty.put("Hard", new int[]{5,4});
             gameSizes.put("Easy", new int[]{180, 200});
-            gameSizes.put("Medium", new int[]{150, 150});
+            gameSizes.put("Medium", new int[]{140, 150});
             gameSizes.put("Hard", new int[]{140, 155});
             
             for(String difficultyName : gameDifficulties){
@@ -90,14 +120,16 @@ public class App extends JFrame
         
         isInitialized = true;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setTitle("Test");
+        setTitle("PairUP");
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         final ImageIcon bg = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/linus.jpg").getImage().getScaledInstance(WIDTH, HEIGHT, Image.SCALE_SMOOTH));
+        final ImageIcon mainBg = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/background.jpg").getImage().getScaledInstance(WIDTH, HEIGHT, Image.SCALE_AREA_AVERAGING));
+        
         setContentPane(new JPanel(){
             @Override
             protected void paintComponent(Graphics g){
                 super.paintComponent(g);
-                g.drawImage(bg.getImage(), 0, 0, null);
+                g.drawImage(mainBg.getImage(), 0, 0, null);
             }
         });
 
@@ -132,7 +164,7 @@ public class App extends JFrame
         GameMenuGBC.fill = GridBagConstraints.BOTH;
 
         final JLabel titleLabel = new JLabel("PairUP!");
-        titleLabel.setFont(new Font("Arial", Font.PLAIN, 68));
+        titleLabel.setFont(new Font("Helvetica", Font.PLAIN, 68));
         titleLabel.setForeground(Color.BLACK);
         
         GameMenuGBC.ipadx = 5;
@@ -307,12 +339,26 @@ public class App extends JFrame
         final JButton selectBtn = new JButton("Select Topic");
         final JButton randomBtn = new JButton("Random Topic");
         final JButton gameModeBackBtn = new JButton("Back");
+        
+        gameModeTitle.setFont(new Font("Arial", Font.PLAIN, 42));
+        gameModeTitle.setHorizontalAlignment(JLabel.CENTER);
 
+        GameMode.setOpaque(false);
 
         GameMode.add(gameModeTitle,GameDifficultyGBC);
+
+        GameDifficultyGBC.insets = new Insets(7, 96, 7, 96);
+        GameDifficultyGBC.ipady = 15;
         GameMode.add(selectBtn,GameDifficultyGBC);
         GameMode.add(randomBtn,GameDifficultyGBC);
+        GameDifficultyGBC.insets.left = 132;
+        GameDifficultyGBC.insets.right = 132;
         GameMode.add(gameModeBackBtn,GameDifficultyGBC);
+
+        for(JButton btn : new JButton[]{selectBtn, randomBtn, gameModeBackBtn}){
+            btn.setFont(btnFont);
+            btn.setFocusPainted(false);
+        }
 
 
         selectBtn.addActionListener(new ActionListener() {
@@ -369,6 +415,7 @@ public class App extends JFrame
         final JPanel topicsBodyPanel = new JPanel();
         final JLabel topicsTitle = new JLabel("PairUP");
         ArrayList<JPanel> topics = new ArrayList<JPanel>();
+        
 
 
         topicsTitlePanel.setLayout(topicsTitlePanelLayout);
@@ -391,10 +438,12 @@ public class App extends JFrame
         GameTopics.add(topicsTitlePanel, GameTopicsGBC);
         GameTopicsGBC.insets = new Insets(0,0,0,0);
 
+        topicsBodyGBC.anchor = GridBagConstraints.NORTH;
         topicsBodyGBC.insets = new Insets(7,10,7,10);
-        final Set gameTopics = GameInfo.gameTopics.keySet();
+        final Set<String> gameTopics = GameInfo.gameTopics.keySet();
         System.out.println(gameTopics.size());
         int i = 0;
+        
         for(Object key : gameTopics){
             if(((i+1) % 4) == 0)
                 topicsBodyGBC.gridwidth = GridBagConstraints.REMAINDER;
@@ -405,51 +454,225 @@ public class App extends JFrame
             final int
                 scWidth = screenSize.width,
                 scHeight = screenSize.height;
+            final String finalKey = (String) key;
             sampleTopic.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     // TODO Auto-generated method stub
                     super.mouseClicked(e);
                     self.GameUI.remove(GameTopics);
-
+                    topic = (String) finalKey;
                     
                     // RootGBC.weighty = 0;
                     RootGBC.anchor = GridBagConstraints.CENTER;
                     
-
                     
                     int[] gridSize = GameInfo.gameDifficulty.get(difficulty);
                     GridBagLayout newLayout = new GridBagLayout();
                     GridBagConstraints gbc = new GridBagConstraints();
                     final JPanel game = new JPanel();
                     gbc.anchor = GridBagConstraints.CENTER;
-                    gbc.fill = GridBagConstraints.NONE;
                     game.setOpaque(false);
                     game.setLayout(newLayout);
                     final JPanel titlePanel = new JPanel();
-                    titlePanel.add(new JLabel("test"));
+                    final JPanel rightPanel = new JPanel();
+                    final JButton pauseBtn = new JButton("Pause");
+                    titlePanel.setOpaque(false);
+                    titlePanel.setLayout(new BorderLayout());
+                    titlePanel.add(new JLabel("test"), BorderLayout.SOUTH);
+                    
+                    rightPanel.setOpaque(false);
+                    rightPanel.setLayout(new BorderLayout());
+                    
+                    rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.PAGE_AXIS));
+                    rightPanel.add(pauseBtn);
+
+                    final JPanel pausePanel = new JPanel();
+                    final JPanel pausePanelBtns = new JPanel();
+
+                    final GridBagLayout pausePanelBtnsLayout = new GridBagLayout();
+                    final GridBagConstraints pausePanelBtnsGBC = new GridBagConstraints();
+                    pausePanelBtns.setLayout(pausePanelBtnsLayout);
+                    final JButton playBtn = new JButton("Play");
+                    final JButton restartBtn = new JButton("Restart");
+                    final JButton gameExitBtn = new JButton("Menu");
+
+                    for(JButton btn: new JButton[]{playBtn,restartBtn,gameExitBtn}){
+                        pausePanelBtns.add(btn);
+                    }
+                    gameExitBtn.addActionListener(new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            MainGame.removeAll();
+                            self.GameUI.remove(MainGame);
+                            self.GameUI.add(GameMenu, GameUIGBC);
+                            
+                            RootGBC.anchor = GridBagConstraints.CENTER;
+                            self.GameUILayout.setConstraints(GameMenu, RootGBC);
+                            self.revalidate();
+                            self.repaint();
+                        }
+                    });
+
+                    pausePanel.setOpaque(false);
+                    GridBagLayout pausePanelLayout = new GridBagLayout();
+                    GridBagConstraints pausePanelGBC = new GridBagConstraints();
+                    pausePanel.setLayout(pausePanelLayout);
+                    pausePanelGBC.anchor = GridBagConstraints.CENTER;
+                    final JLabel pauseHeading = new JLabel("Game Paused");
+                    pauseHeading.setFont(new Font("Arial", Font.PLAIN, 42));
+
+                    pausePanelGBC.gridwidth = GridBagConstraints.REMAINDER;
+
+                    pausePanel.add(pauseHeading,pausePanelGBC);
+                    pausePanel.add(pausePanelBtns, pausePanelGBC);
+                    pausePanel.setPreferredSize(new Dimension(900, 700));
+                    pauseBtn.addActionListener(new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e){
+                            
+                            if(pauseBtn.getText().equals("Pause")){
+                                MainGame.remove(game);
+                                MainGame.add(pausePanel, BorderLayout.CENTER);
+                                pauseBtn.setText("Play");
+                            }
+                            else{
+                                MainGame.remove(pausePanel);
+                                MainGame.add(game, BorderLayout.CENTER);
+                                pauseBtn.setText("Pause");
+                            }
+                            MainGame.revalidate();
+                            MainGame.repaint();
+                        }
+                    });
+
+                    final HashSet<JButton> validated = new HashSet<JButton>();
+                    MainGame.setLayout(new BorderLayout());
+                    MainGame.add(titlePanel,BorderLayout.WEST);
+                    gbc.fill = GridBagConstraints.NONE;
                     gbc.gridwidth = GridBagConstraints.REMAINDER;
                     gbc.insets = new Insets(5, 5, 5, 5);
-                    gbc.weighty = 1;
-                    MainGame.add(titlePanel,gbc);
                     MainGame.setPreferredSize(new Dimension(800, 700));
                     final int[] cardSize = GameInfo.gameSizes.get(difficulty);
-                    for(int i = 0, max = gridSize[0] * gridSize[1]; i< max;i++){
+                    final ImageIcon cardBack = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/card_back.png").getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                    ArrayList<JButton> deck = new ArrayList<JButton>();
+                    final String[] topicDeck = GameInfo.gameTopics.get(topic);
+                    
+                    for(int i = 0, max = (gridSize[0] * gridSize[1]); i< max;i+= 2){
+                        final JButton gameCard = new JButton(cardBack);
+                        final JButton gameCard2 = new JButton(cardBack);
+                        gameCard.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
+                        ;
+                        gameCard2.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
+                        ;
+                        final String cardDef = topicDeck[i];
+                        final ImageIcon cardPic = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/asset/" + topic + "/" + topicDeck[i+1] ).getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                        gameCard.addActionListener(
+                            new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    if(validated.contains(gameCard))
+                                        return;
+                                    if(lastPicked == null){
+                                        lastPicked = gameCard;
+                                        gameCard.setIcon(null);
+                                        gameCard.setText(cardDef);
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard){
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard2){
+                                        gameCard.setIcon(null);
+                                        gameCard.setText(cardDef);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        validated.add(gameCard);
+                                        validated.add(gameCard2);
+                                        lastPicked = null;
+                                        if(validated.size() == topicDeck.length){
+
+                                        }
+                                        return;
+                                    }
+                                    lastPicked.removeAll();
+                                    lastPicked.setText(null);
+                                    lastPicked.setIcon(cardBack);
+                                    lastPicked = null;
+                                };
+                            }
+                        );
+                        gameCard2.addActionListener(
+                            new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    if(validated.contains(gameCard2))
+                                        return;
+                                    if(lastPicked == null){
+                                        lastPicked = gameCard2;
+                                        gameCard2.setText(null);
+                                        gameCard2.setIcon(cardPic);
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard2){
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard){
+                                        gameCard2.setText(null);
+                                        gameCard2.setIcon(cardPic);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        validated.add(gameCard);
+                                        validated.add(gameCard2);
+                                        lastPicked = null;
+                                        if(validated.size() == topicDeck.length){
+                                            
+                                        }
+                                        return;
+                                    }
+                                    lastPicked.removeAll();
+                                    lastPicked.setText(null);
+                                    lastPicked.setIcon(cardBack);
+
+                                    lastPicked = null;
+                                };
+                            }
+                        );
+                        deck.add(gameCard);
+                        deck.add(gameCard2);
+                    }
+                    Collections.shuffle(deck);
+                    for(int i =0, len = deck.size();i < len;i++){
                         if((i+1) % gridSize[0] == 0)
                             gbc.gridwidth = GridBagConstraints.REMAINDER;
                         else
                             gbc.gridwidth = 1;
-                        final JButton gameCard = new JButton("btn");
-                        // gameCard.setPreferredSize(new Dimension(190, 280));
-                        gameCard.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
-                        game.add(gameCard, gbc);
+                        game.add(deck.get(i), gbc);
                     }
-                    
-                    MainGame.add(game);
+                    MainGame.add(game, BorderLayout.CENTER);
+                    MainGame.add(rightPanel, BorderLayout.EAST);
+                    MainGame.setPreferredSize(new Dimension(900, 700));
                     self.GameUI.add(MainGame, GameUIGBC);
                     self.GameUILayout.setConstraints(GameUI, RootGBC);
+                    
+                    startTimer = new Timer(1000, new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            gameTime++;
+                        }
+                    });
+                    countdownTimer = new Timer(1000, new ActionListener(){
+                        
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            if(--gameCountdown == 0){
+                                startTimer.start();
+                                countdownTimer.stop();
+                                gameCountdown = 5;
+                            }
+                        }
+                    });
                     self.revalidate();
                     self.repaint();
+                    countdownTimer.start();
                 }
                 @Override
                 public void mouseEntered(MouseEvent e) {
