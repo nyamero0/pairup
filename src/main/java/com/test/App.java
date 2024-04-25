@@ -11,6 +11,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.text.html.HTMLDocument.Iterator;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -22,17 +23,23 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.List;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowStateListener;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 /**
  * Hello world!
@@ -54,12 +61,16 @@ public class App extends JFrame
     private String difficulty;
     private String topic;
     private JButton lastPicked;
+    private JButton lastPicked2;
     private Timer countdownTimer;
     private Timer startTimer;
     private long gameTime;
     private int gameAccuracy;
     private int gameCountdown = 5;
-    
+    private JButton revealedCard1;
+    private JButton revealedCard2;
+    private int attempt = 0;
+    private int success = 0;
 
     private static class GameInfo {
         public static HashMap<String, HashMap<String, HashMap<String, Object>>> GameStat = new HashMap<String, HashMap<String, HashMap<String,Object>>>();
@@ -122,7 +133,7 @@ public class App extends JFrame
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("PairUP");
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        final ImageIcon bg = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/linus.jpg").getImage().getScaledInstance(WIDTH, HEIGHT, Image.SCALE_SMOOTH));
+        final ImageIcon bg = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/card_back.png").getImage().getScaledInstance(160, 280, Image.SCALE_SMOOTH));
         final ImageIcon mainBg = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/background.jpg").getImage().getScaledInstance(WIDTH, HEIGHT, Image.SCALE_AREA_AVERAGING));
         
         setContentPane(new JPanel(){
@@ -388,6 +399,323 @@ public class App extends JFrame
                 self.repaint();
                 self.GameUI.remove(GameMode);
                 self.GameUI.add(self.GamePages.get("MainGame"), GameUIGBC);
+                
+                    // TODO Auto-generated method stub
+                    Set<String> keys = GameInfo.gameTopics.keySet();
+                    Random rand = new Random();
+                    int a = rand.nextInt(keys.size());
+                    String b = "Programming Languages";
+                    java.util.Iterator<String> iter = keys.iterator();
+                    for (int i = 0; i<a;i++){
+                        b = iter.next();
+                    }
+                    final String finalKey = b;
+                    self.GameUI.remove(GameTopics);
+
+                    topic = (String) finalKey;
+                    
+                    // RootGBC.weighty = 0;
+                    RootGBC.anchor = GridBagConstraints.CENTER;
+                    
+                    
+                    int[] gridSize = GameInfo.gameDifficulty.get(difficulty);
+                    GridBagLayout newLayout = new GridBagLayout();
+                    GridBagConstraints gbc = new GridBagConstraints();
+                    final JPanel game = new JPanel();
+                    gbc.anchor = GridBagConstraints.CENTER;
+                    game.setOpaque(false);
+                    game.setLayout(newLayout);
+                    final JPanel titlePanel = new JPanel();
+                    final JPanel rightPanel = new JPanel();
+                    final JButton pauseBtn = new JButton("Pause");
+                    final JLabel accuracyLabel = new JLabel("Accuracy: 0%");
+                    final JLabel countdownLabel = new JLabel("Timer: 0m 5s");
+                    final JLabel infoLabel = new JLabel();
+                    infoLabel.setOpaque(false);
+                    final Font infFont = new Font("Arial", Font.PLAIN, 18);
+                    countdownLabel.setFont(infFont);
+                    countdownLabel.setForeground(Color.WHITE);
+                    countdownLabel.setForeground(Color.WHITE);
+                    countdownLabel.setPreferredSize(new Dimension(130,24));
+                    countdownLabel.setPreferredSize(new Dimension(130,24));
+                    // countdownLabel.setPreferredSize(new Dimension(52,28));
+                    titlePanel.setOpaque(false);
+                    // titlePanel.setLayout(new BorderLayout());
+                    infoLabel.add(accuracyLabel);
+                    infoLabel.add(countdownLabel);
+                    infoLabel.setPreferredSize(new Dimension(130, 48));
+                    accuracyLabel.setForeground(Color.WHITE);
+                    accuracyLabel.setFont(infFont);
+                    // infoLabel.setPreferredSize(new );
+                    GridBagConstraints tpgbc = new GridBagConstraints();
+                    titlePanel.setLayout(new GridBagLayout());
+                    tpgbc.gridwidth = GridBagConstraints.REMAINDER;
+                    tpgbc.anchor = GridBagConstraints.CENTER;
+                    titlePanel.add(accuracyLabel, tpgbc);
+                    titlePanel.add(countdownLabel, tpgbc);
+                    
+                    
+                    rightPanel.setOpaque(false);
+                    rightPanel.setLayout(new BorderLayout());
+                    
+                    rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.PAGE_AXIS));
+                    rightPanel.add(pauseBtn);
+
+                    final JPanel pausePanel = new JPanel();
+                    final JPanel pausePanelBtns = new JPanel();
+
+                    final GridBagLayout pausePanelBtnsLayout = new GridBagLayout();
+                    final GridBagConstraints pausePanelBtnsGBC = new GridBagConstraints();
+                    pausePanelBtns.setLayout(pausePanelBtnsLayout);
+                    final JButton playBtn = new JButton("Play");
+                    final JButton restartBtn = new JButton("Restart");
+                    final JButton gameExitBtn = new JButton("Menu");
+
+                    for(JButton btn: new JButton[]{playBtn,gameExitBtn}){
+                        pausePanelBtns.add(btn);
+                    }
+                    gameExitBtn.addActionListener(new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            MainGame.removeAll();
+                            self.GameUI.remove(MainGame);
+                            self.GameUI.add(GameMenu, GameUIGBC);
+                            gameTime = 0;
+                            gameCountdown = 5;
+                            RootGBC.anchor = GridBagConstraints.CENTER;
+                            self.GameUILayout.setConstraints(GameMenu, RootGBC);
+                            self.revalidate();
+                            self.repaint();
+                        }
+                    });
+
+                    pausePanel.setOpaque(false);
+                    GridBagLayout pausePanelLayout = new GridBagLayout();
+                    GridBagConstraints pausePanelGBC = new GridBagConstraints();
+                    pausePanel.setLayout(pausePanelLayout);
+                    pausePanelGBC.anchor = GridBagConstraints.CENTER;
+                    final JLabel pauseHeading = new JLabel("Game Paused");
+                    pauseHeading.setFont(new Font("Arial", Font.PLAIN, 42));
+
+                    pausePanelGBC.gridwidth = GridBagConstraints.REMAINDER;
+
+                    pausePanel.add(pauseHeading,pausePanelGBC);
+                    pausePanel.add(pausePanelBtns, pausePanelGBC);
+                    pausePanel.setPreferredSize(new Dimension(1100, 700));
+                    pauseBtn.addActionListener(new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e){
+                            
+                            if(pauseBtn.getText().equals("Pause")){
+                                MainGame.remove(game);
+                                MainGame.add(pausePanel, BorderLayout.CENTER);
+                                countdownTimer.stop();
+                                pauseBtn.setText("Play");
+                            }
+                            else{
+                                MainGame.remove(pausePanel);
+                                MainGame.add(game, BorderLayout.CENTER);
+                                countdownTimer.start();
+                                pauseBtn.setText("Pause");
+                            }
+                            MainGame.revalidate();
+                            MainGame.repaint();
+                        }
+                    });
+
+                    final HashSet<JButton> validated = new HashSet<JButton>();
+                    MainGame.setLayout(new BorderLayout());
+                    MainGame.add(titlePanel,BorderLayout.WEST);
+                    gbc.fill = GridBagConstraints.NONE;
+                    gbc.gridwidth = GridBagConstraints.REMAINDER;
+                    gbc.insets = new Insets(5, 5, 5, 5);
+                    MainGame.setPreferredSize(new Dimension(1100, 700));
+                    final int[] cardSize = GameInfo.gameSizes.get(difficulty);
+                    final ImageIcon cardBack = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/card_back.png").getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                    final ArrayList<JButton> deck = new ArrayList<JButton>();
+                    final String[] topicDeck = GameInfo.gameTopics.get(topic);
+                    
+                    for(int i = 0, max = (gridSize[0] * gridSize[1]); i< max;i+= 2){
+                        final String cardDef = topicDeck[i];
+                        final ImageIcon cardPic = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/asset/" + topic + "/" + topicDeck[i+1] ).getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                        final JButton gameCard = new JButton(cardDef);
+                        final JButton gameCard2 = new JButton(cardPic);
+                        gameCard2.setDisabledIcon(cardPic);
+                        gameCard.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
+                        ;
+                        gameCard2.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
+                        ;
+                        
+                        gameCard.addActionListener(
+                            new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    
+                                    if(validated.contains(gameCard))
+                                        return;
+                                    if(lastPicked == null){
+                                        if(revealedCard1 != null && !validated.contains(revealedCard1)){
+                                            revealedCard1.removeAll();
+                                            revealedCard1.setText(null);
+                                            revealedCard1.setIcon(cardBack);
+                                            revealedCard1.setBorder(BorderFactory.createEmptyBorder());
+
+                                        }
+                                        if(revealedCard2 != null && !validated.contains(revealedCard2)){
+                                            revealedCard2.removeAll();
+                                            revealedCard2.setText(null);
+                                            revealedCard2.setIcon(cardBack);
+                                            revealedCard2.setBorder(BorderFactory.createEmptyBorder());
+
+                                        }
+                                        lastPicked = gameCard;
+                                        gameCard.setIcon(null);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.BLUE,2 ,true));
+                                        gameCard.setText(cardDef);
+                                        revealedCard1 = gameCard;
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard){
+                                        gameCard.setText(cardDef);
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard2){
+                                        gameCard.setIcon(null);
+                                        gameCard.setText(cardDef);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        validated.add(gameCard);
+                                        validated.add(gameCard2);
+                                        lastPicked = null;
+                                        lastPicked2 = null;
+                                        System.out.printf("%d %d",validated.size(), topicDeck.length);
+                                        if(validated.size() == deck.size()){
+                                            System.out.println("222");
+                                            MainGame.removeAll();
+                                            self.GameUI.remove(MainGame);
+                                            self.GameUI.add(GameTopics, GameUIGBC);
+                                            self.revalidate();
+                                            self.repaint();
+                                        }
+                                        return;
+                                    }
+                                    else {
+                                        gameCard.setIcon(null);
+                                        gameCard.setText(cardDef);
+                                        lastPicked.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+
+                                        revealedCard2 = gameCard;
+                                    }
+                                    
+                                    lastPicked = null;
+                                };
+                            }
+                        );
+                        gameCard2.addActionListener(
+                            new ActionListener() {
+                                public void actionPerformed(ActionEvent e) {
+                                    if(validated.contains(gameCard2))
+                                        return;
+                                    
+                                    if(lastPicked == null){
+                                        if(revealedCard1 != null && !validated.contains(revealedCard1)){
+                                            revealedCard1.removeAll();
+                                            revealedCard1.setText(null);
+                                            revealedCard1.setIcon(cardBack);
+                                            revealedCard1.setBorder(BorderFactory.createEmptyBorder());
+                                        }
+                                        if(revealedCard2 != null && !validated.contains(revealedCard2)){
+                                            revealedCard2.removeAll();
+                                            revealedCard2.setText(null);
+                                            revealedCard2.setIcon(cardBack);
+                                            revealedCard2.setBorder(BorderFactory.createEmptyBorder());
+                                        }
+                                        lastPicked = gameCard2;
+                                        gameCard2.setText(null);
+                                        gameCard2.setIcon(cardPic);
+                                        revealedCard1 = gameCard2;
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard2){
+                                        return;
+                                    }
+                                    if(lastPicked == gameCard){
+                                        gameCard2.setText(null);
+                                        gameCard2.setIcon(cardPic);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        validated.add(gameCard);
+                                        validated.add(gameCard2);
+                                        lastPicked = null;
+                                        if(validated.size() == deck.size()){
+                                            System.out.println("222");
+
+                                            MainGame.removeAll();
+                                            self.GameUI.remove(MainGame);
+                                            self.GameUI.add(GameTopics, GameUIGBC);
+                                            self.revalidate();
+                                            self.repaint();
+                                        }
+                                        return;
+                                    }else{
+                                        gameCard2.setIcon(cardPic);
+                                        revealedCard2 = gameCard2;
+                                        lastPicked.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+
+                                    }
+                                    lastPicked = null;
+                                };
+                            }
+                        );
+                        deck.add(gameCard);
+                        deck.add(gameCard2);
+                    }
+                    Collections.shuffle(deck);
+                    for(int i =0, len = deck.size();i < len;i++){
+                        if((i+1) % gridSize[0] == 0)
+                            gbc.gridwidth = GridBagConstraints.REMAINDER;
+                        else
+                            gbc.gridwidth = 1;
+                        game.add(deck.get(i), gbc);
+                    }
+                    MainGame.add(game, BorderLayout.CENTER);
+                    MainGame.add(rightPanel, BorderLayout.EAST);
+                    MainGame.setPreferredSize(new Dimension(1100, 700));
+                    self.GameUI.add(MainGame, GameUIGBC);
+                    self.GameUILayout.setConstraints(GameUI, RootGBC);
+                    
+                    startTimer = new Timer(1000, new ActionListener(){
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            gameTime++;
+                            final long sec = gameTime % 60;
+                            final long min = gameTime / 60;
+                            countdownLabel.setText(String.format("Timer:%dm %ds", min, sec));
+                        }
+                    });
+                    countdownTimer = new Timer(1000, new ActionListener(){
+                        
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            if(--gameCountdown == 0){
+                                for(JButton btn: deck){{
+                                    btn.setText(null);
+                                    btn.setIcon(cardBack);
+                                }}
+                                startTimer.start();
+                                countdownTimer.stop();
+                                countdownLabel.setText("Timer: 0m 0s");
+                                gameCountdown = 4;
+                            }
+                            else 
+                                countdownLabel.setText(String.format("Timer: 0m %ds", gameCountdown));
+                        }
+                    });
+                    self.revalidate();
+                    self.repaint();
+                    countdownTimer.start();
+                
                 self.revalidate();
                 self.repaint();
             }
@@ -477,9 +805,32 @@ public class App extends JFrame
                     final JPanel titlePanel = new JPanel();
                     final JPanel rightPanel = new JPanel();
                     final JButton pauseBtn = new JButton("Pause");
+                    final JLabel accuracyLabel = new JLabel("Accuracy: 0%");
+                    final JLabel countdownLabel = new JLabel("Timer: 0m 5s");
+                    final JLabel infoLabel = new JLabel();
+                    infoLabel.setOpaque(false);
+                    final Font infFont = new Font("Arial", Font.PLAIN, 18);
+                    countdownLabel.setFont(infFont);
+                    countdownLabel.setForeground(Color.WHITE);
+                    countdownLabel.setForeground(Color.WHITE);
+                    countdownLabel.setPreferredSize(new Dimension(130,24));
+                    countdownLabel.setPreferredSize(new Dimension(130,24));
+                    // countdownLabel.setPreferredSize(new Dimension(52,28));
                     titlePanel.setOpaque(false);
-                    titlePanel.setLayout(new BorderLayout());
-                    titlePanel.add(new JLabel("test"), BorderLayout.SOUTH);
+                    // titlePanel.setLayout(new BorderLayout());
+                    infoLabel.add(accuracyLabel);
+                    infoLabel.add(countdownLabel);
+                    infoLabel.setPreferredSize(new Dimension(130, 48));
+                    accuracyLabel.setForeground(Color.WHITE);
+                    accuracyLabel.setFont(infFont);
+                    // infoLabel.setPreferredSize(new );
+                    GridBagConstraints tpgbc = new GridBagConstraints();
+                    titlePanel.setLayout(new GridBagLayout());
+                    tpgbc.gridwidth = GridBagConstraints.REMAINDER;
+                    tpgbc.anchor = GridBagConstraints.CENTER;
+                    titlePanel.add(accuracyLabel, tpgbc);
+                    titlePanel.add(countdownLabel, tpgbc);
+                    
                     
                     rightPanel.setOpaque(false);
                     rightPanel.setLayout(new BorderLayout());
@@ -497,7 +848,7 @@ public class App extends JFrame
                     final JButton restartBtn = new JButton("Restart");
                     final JButton gameExitBtn = new JButton("Menu");
 
-                    for(JButton btn: new JButton[]{playBtn,restartBtn,gameExitBtn}){
+                    for(JButton btn: new JButton[]{playBtn,gameExitBtn}){
                         pausePanelBtns.add(btn);
                     }
                     gameExitBtn.addActionListener(new ActionListener(){
@@ -506,7 +857,8 @@ public class App extends JFrame
                             MainGame.removeAll();
                             self.GameUI.remove(MainGame);
                             self.GameUI.add(GameMenu, GameUIGBC);
-                            
+                            gameTime = 0;
+                            gameCountdown = 5;
                             RootGBC.anchor = GridBagConstraints.CENTER;
                             self.GameUILayout.setConstraints(GameMenu, RootGBC);
                             self.revalidate();
@@ -526,7 +878,7 @@ public class App extends JFrame
 
                     pausePanel.add(pauseHeading,pausePanelGBC);
                     pausePanel.add(pausePanelBtns, pausePanelGBC);
-                    pausePanel.setPreferredSize(new Dimension(900, 700));
+                    pausePanel.setPreferredSize(new Dimension(1100, 700));
                     pauseBtn.addActionListener(new ActionListener(){
                         @Override
                         public void actionPerformed(ActionEvent e){
@@ -534,11 +886,13 @@ public class App extends JFrame
                             if(pauseBtn.getText().equals("Pause")){
                                 MainGame.remove(game);
                                 MainGame.add(pausePanel, BorderLayout.CENTER);
+                                countdownTimer.stop();
                                 pauseBtn.setText("Play");
                             }
                             else{
                                 MainGame.remove(pausePanel);
                                 MainGame.add(game, BorderLayout.CENTER);
+                                countdownTimer.start();
                                 pauseBtn.setText("Pause");
                             }
                             MainGame.revalidate();
@@ -552,51 +906,84 @@ public class App extends JFrame
                     gbc.fill = GridBagConstraints.NONE;
                     gbc.gridwidth = GridBagConstraints.REMAINDER;
                     gbc.insets = new Insets(5, 5, 5, 5);
-                    MainGame.setPreferredSize(new Dimension(800, 700));
+                    MainGame.setPreferredSize(new Dimension(1100, 700));
                     final int[] cardSize = GameInfo.gameSizes.get(difficulty);
                     final ImageIcon cardBack = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/card_back.png").getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
-                    ArrayList<JButton> deck = new ArrayList<JButton>();
+                    final ArrayList<JButton> deck = new ArrayList<JButton>();
                     final String[] topicDeck = GameInfo.gameTopics.get(topic);
                     
                     for(int i = 0, max = (gridSize[0] * gridSize[1]); i< max;i+= 2){
-                        final JButton gameCard = new JButton(cardBack);
-                        final JButton gameCard2 = new JButton(cardBack);
+                        final String cardDef = topicDeck[i];
+                        final ImageIcon cardPic = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/asset/" + topic + "/" + topicDeck[i+1] ).getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                        final JButton gameCard = new JButton(cardDef);
+                        final JButton gameCard2 = new JButton(cardPic);
+                        gameCard2.setDisabledIcon(cardPic);
                         gameCard.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
                         ;
                         gameCard2.setPreferredSize(new Dimension(cardSize[0],cardSize[1]));
                         ;
-                        final String cardDef = topicDeck[i];
-                        final ImageIcon cardPic = new ImageIcon(new ImageIcon(Paths.get("").toAbsolutePath().normalize().toString() + "/src/main/java/com/test/asset/" + topic + "/" + topicDeck[i+1] ).getImage().getScaledInstance(cardSize[0], cardSize[1], Image.SCALE_SMOOTH));
+                        
                         gameCard.addActionListener(
                             new ActionListener() {
                                 public void actionPerformed(ActionEvent e) {
+                                    
                                     if(validated.contains(gameCard))
                                         return;
                                     if(lastPicked == null){
+                                        if(revealedCard1 != null && !validated.contains(revealedCard1)){
+                                            revealedCard1.removeAll();
+                                            revealedCard1.setText(null);
+                                            revealedCard1.setIcon(cardBack);
+                                            revealedCard1.setBorder(BorderFactory.createEmptyBorder());
+
+                                        }
+                                        if(revealedCard2 != null && !validated.contains(revealedCard2)){
+                                            revealedCard2.removeAll();
+                                            revealedCard2.setText(null);
+                                            revealedCard2.setIcon(cardBack);
+                                            revealedCard2.setBorder(BorderFactory.createEmptyBorder());
+
+                                        }
                                         lastPicked = gameCard;
                                         gameCard.setIcon(null);
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.BLUE,2 ,true));
                                         gameCard.setText(cardDef);
+                                        revealedCard1 = gameCard;
                                         return;
                                     }
                                     if(lastPicked == gameCard){
+                                        gameCard.setText(cardDef);
                                         return;
                                     }
                                     if(lastPicked == gameCard2){
                                         gameCard.setIcon(null);
                                         gameCard.setText(cardDef);
-                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
-                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
                                         validated.add(gameCard);
                                         validated.add(gameCard2);
                                         lastPicked = null;
-                                        if(validated.size() == topicDeck.length){
-
+                                        lastPicked2 = null;
+                                        System.out.printf("%d %d",validated.size(), topicDeck.length);
+                                        if(validated.size() == deck.size()){
+                                            System.out.println("222");
+                                            MainGame.removeAll();
+                                            self.GameUI.remove(MainGame);
+                                            self.GameUI.add(GameTopics, GameUIGBC);
+                                            self.revalidate();
+                                            self.repaint();
                                         }
                                         return;
                                     }
-                                    lastPicked.removeAll();
-                                    lastPicked.setText(null);
-                                    lastPicked.setIcon(cardBack);
+                                    else {
+                                        gameCard.setIcon(null);
+                                        gameCard.setText(cardDef);
+                                        lastPicked.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+
+                                        revealedCard2 = gameCard;
+                                    }
+                                    
                                     lastPicked = null;
                                 };
                             }
@@ -606,10 +993,24 @@ public class App extends JFrame
                                 public void actionPerformed(ActionEvent e) {
                                     if(validated.contains(gameCard2))
                                         return;
+                                    
                                     if(lastPicked == null){
+                                        if(revealedCard1 != null && !validated.contains(revealedCard1)){
+                                            revealedCard1.removeAll();
+                                            revealedCard1.setText(null);
+                                            revealedCard1.setIcon(cardBack);
+                                            revealedCard1.setBorder(BorderFactory.createEmptyBorder());
+                                        }
+                                        if(revealedCard2 != null && !validated.contains(revealedCard2)){
+                                            revealedCard2.removeAll();
+                                            revealedCard2.setText(null);
+                                            revealedCard2.setIcon(cardBack);
+                                            revealedCard2.setBorder(BorderFactory.createEmptyBorder());
+                                        }
                                         lastPicked = gameCard2;
                                         gameCard2.setText(null);
                                         gameCard2.setIcon(cardPic);
+                                        revealedCard1 = gameCard2;
                                         return;
                                     }
                                     if(lastPicked == gameCard2){
@@ -618,20 +1019,28 @@ public class App extends JFrame
                                     if(lastPicked == gameCard){
                                         gameCard2.setText(null);
                                         gameCard2.setIcon(cardPic);
-                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
-                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 1, true));
+                                        gameCard.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2, true));
                                         validated.add(gameCard);
                                         validated.add(gameCard2);
                                         lastPicked = null;
                                         if(validated.size() == topicDeck.length){
-                                            
+                                            System.out.println("222");
+
+                                            MainGame.removeAll();
+                                            self.GameUI.remove(MainGame);
+                                            self.GameUI.add(GameTopics, GameUIGBC);
+                                            self.revalidate();
+                                            self.repaint();
                                         }
                                         return;
-                                    }
-                                    lastPicked.removeAll();
-                                    lastPicked.setText(null);
-                                    lastPicked.setIcon(cardBack);
+                                    }else{
+                                        gameCard2.setIcon(cardPic);
+                                        revealedCard2 = gameCard2;
+                                        lastPicked.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
+                                        gameCard2.setBorder(BorderFactory.createLineBorder(Color.RED, 2, true));
 
+                                    }
                                     lastPicked = null;
                                 };
                             }
@@ -649,7 +1058,7 @@ public class App extends JFrame
                     }
                     MainGame.add(game, BorderLayout.CENTER);
                     MainGame.add(rightPanel, BorderLayout.EAST);
-                    MainGame.setPreferredSize(new Dimension(900, 700));
+                    MainGame.setPreferredSize(new Dimension(1100, 700));
                     self.GameUI.add(MainGame, GameUIGBC);
                     self.GameUILayout.setConstraints(GameUI, RootGBC);
                     
@@ -657,6 +1066,9 @@ public class App extends JFrame
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             gameTime++;
+                            final long sec = gameTime % 60;
+                            final long min = gameTime / 60;
+                            countdownLabel.setText(String.format("Timer:%dm %ds", min, sec));
                         }
                     });
                     countdownTimer = new Timer(1000, new ActionListener(){
@@ -664,10 +1076,19 @@ public class App extends JFrame
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             if(--gameCountdown == 0){
+                                for(JButton btn: deck){{
+                                    btn.setText(null);
+                                    btn.setIcon(cardBack);
+                                    btn.setEnabled(true);
+                                }}
                                 startTimer.start();
                                 countdownTimer.stop();
-                                gameCountdown = 5;
+                                countdownLabel.setText("Timer: 0m 0s");
+                                
+                                gameCountdown = 4;
                             }
+                            else 
+                                countdownLabel.setText(String.format("Timer: 0m %ds", gameCountdown));
                         }
                     });
                     self.revalidate();
@@ -763,6 +1184,7 @@ public class App extends JFrame
         JPanel curr = GamePages.get("GameMenu");
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         
+        
 
         GameUI.add(curr, GameUIGBC);
         add(GameUI, RootGBC);
@@ -773,6 +1195,7 @@ public class App extends JFrame
             HEIGHT
         );
         setVisible(true);
+        setResizable(true);
     }
     
     public static void main( String[] args )
